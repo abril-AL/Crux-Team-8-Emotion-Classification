@@ -5,9 +5,12 @@
 ///////////////////////////////////////////////////////
 // v2 uses single RGB LED instead of 4 seperate LEDs //
 ///////////////////////////////////////////////////////
-#define R 2
-#define G 4
-#define B 7
+#define B1 9
+#define B2 2
+#define G1 3
+#define G2 4
+#define R1 6
+#define R2 7
 
 
 // Input Byte, read from Serial (COM6)
@@ -15,9 +18,23 @@ int inByte = 0;
 
 void setup(){
     Serial.begin(9600);
-    pinMode(R, OUTPUT); 
-    pinMode(G, OUTPUT);
-    pinMode(B, OUTPUT);
+    pinMode(R1, OUTPUT); 
+    pinMode(R2, OUTPUT);
+    pinMode(G1, OUTPUT);
+    pinMode(G2, OUTPUT); 
+    pinMode(B1, OUTPUT);
+    pinMode(B2, OUTPUT);
+
+    // Test LED2
+    analogWrite(R2, 255);
+    analogWrite(G2, 0);
+    analogWrite(B2, 0);
+
+    //Test LED1
+    analogWrite(R1, 255);
+    analogWrite(G1, 0);
+    analogWrite(B1, 0);
+    
 }
 
 void loop(){
@@ -35,37 +52,52 @@ void loop(){
           case 0:
             // Neutral
             Serial.print(" Neutral\n");
-            analogWrite(R, 255);
-            analogWrite(G, 255);
-            analogWrite(B, 255);
+            analogWrite(R1, 255);
+            analogWrite(G1, 255);
+            analogWrite(B1, 255);
+            analogWrite(R2, 255);
+            analogWrite(G2, 255);
+            analogWrite(B2, 255);
             break;
           case 1:
             // Sad
             Serial.print(" Sad\n");
-            analogWrite(R, 0);
-            analogWrite(G, 0);
-            analogWrite(B, 255);
+            analogWrite(R1, 0);
+            analogWrite(G1, 0);
+            analogWrite(B1, 255);
+            analogWrite(R2, 0);
+            analogWrite(G2, 0);
+            analogWrite(B2, 255);
             break;
           case 2:
             // Happy 
             Serial.print(" Happy");
-            analogWrite(R, 0);
-            analogWrite(G, 255);
-            analogWrite(B, 0);
+            analogWrite(R1, 0);
+            analogWrite(G1, 255);
+            analogWrite(B1, 0);
+            analogWrite(R2, 0);
+            analogWrite(G2, 255);
+            analogWrite(B2, 0);
             break;
           case 3:
             // Angry 
             Serial.print(" Angry\n");
-            analogWrite(R, 255);
-            analogWrite(G, 0);
-            analogWrite(B, 0);
+            analogWrite(R1, 255);
+            analogWrite(G1, 0);
+            analogWrite(B1, 0);
+            analogWrite(R2, 255);
+            analogWrite(G2, 0);
+            analogWrite(B2, 0);
             break;
           default:
             // Other Emotion, testing for rn 
             Serial.print(" Other\n");
-            analogWrite(R, 255);
-            analogWrite(G, 255);
-            analogWrite(B, 255);
+            analogWrite(R1, 255);
+            analogWrite(G1, 255);
+            analogWrite(B1, 255);
+            analogWrite(R2, 255);
+            analogWrite(G2, 255);
+            analogWrite(B2, 255);
             break;
         }  
       } 
