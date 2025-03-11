@@ -89,6 +89,16 @@ void loop(){
             analogWrite(G2, 0);
             analogWrite(B2, 0);
             break;
+          case 4:
+            // idk whatever yellow is
+            Serial.print(" Calm\n");
+            analogWrite(R1, 200);
+            analogWrite(G1, 200);
+            analogWrite(B1, 0);
+            analogWrite(R2, 200);
+            analogWrite(G2, 200);
+            analogWrite(B2, 0);
+            break;
           default:
             // Other Emotion, testing for rn 
             Serial.print(" Other\n");
