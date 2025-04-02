@@ -72,3 +72,17 @@ Board Design
  
 ![board design png](misc/board.png)
 
+## The Valence-Arousal Emotion Model
+
+The Valence-Arousal model is a widely used framework in emotion research. It provides a two-dimensional representation of emotions, allowing for the classification and visualization of emotional states based on their underlying psychological attributes.
+
+**Valence:**
+- Represents the pleasantness or unpleasantness of an emotion
+    - Low Valence: Negative emotions such as sadness, anger, or fear.
+    - High Valence: Positive emotions such as happiness, excitement, or contentment.
+
+**Arousal:**
+- Represents the intensity or activation level of an emotion
+    - Low Arousal: Calm or relaxed states, such as boredom or serenity.
+    - High Arousal: Energetic or activated states, such as anxiety, excitement, or elation.
+
