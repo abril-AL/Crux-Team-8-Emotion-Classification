@@ -34,14 +34,14 @@ def load_eeg_data(fp):
     return data
 
 # Notch filter
-def notch_filter(data, fs=250, freq=60, quality=30):
+def notch_filter(data, fs=255, freq=60, quality=30):
     print("Applying Notch Filter...")
     # 60Hz notch filter
     b, a = signal.iirnotch(freq, quality, fs)
     return signal.filtfilt(b, a, data, axis=0)
 
 # Bandpass filter (0.1-40Hz)
-def bandpass_filter(data, fs=250, lowcut=0.1, highcut=40, order=4):
+def bandpass_filter(data, fs=255, lowcut=0.1, highcut=40, order=4):
     # Butterworth bandpass filter (0.1-40Hz).
     print("Applying Bandpass Filter")
     nyquist = 0.5 * fs
@@ -50,7 +50,7 @@ def bandpass_filter(data, fs=250, lowcut=0.1, highcut=40, order=4):
     return signal.filtfilt(b, a, data, axis=0)
 
 # Label Data
-def label_data(total_samples, fs=250):
+def label_data(total_samples, fs=255):
     print("Labeling Data...")
     labels = []
     session1_labels = [ VA.HVHA, VA.NEUT, VA.HVLA, VA.NEUT, VA.LVHA,
@@ -77,27 +77,45 @@ def normalize_data(data):
 ############
 fp = "Data/Session1/OpenBCI-RAW-2025-03-07_19-34-48.csv"
 data = load_eeg_data(fp)
-print(data[0:1])
+#print(data[0:1])
 n_data = notch_filter(data)
-print(n_data[0:2])
+#print(n_data[0:2])
 bp_data = bandpass_filter(n_data)
-print(bp_data[0:2])
-l_data = label_data(bp_data.shape[0])
+#print(bp_data[0:2])
+labels = label_data(bp_data.shape[0])
+print("Labels:", labels.shape)
+clean_data = bp_data # note: py ref copied not data
+print(f"Data shape: {clean_data.shape}")
+print(f"Labels shape: {labels.shape}")
 ############
 
 # 2. Feature Extraction
 
 # 3 Second sliding window (no overlap)
-def create_windows(data, labels, window_size=750, stride=750):
-    pass
+def create_windows(data, labels, window_size=765, stride=765):
+    # 250 * 3 = 750 samples per window, associated w single label (first sample in that window)
+    print("Dividing into 3s windows...")
+    num_samples = len(data)
+    windows = []
+    window_labels = []
 
-############
-
-############
+    for start in range(0, num_samples - window_size + 1, stride):
+        end = start + window_size
+        windows.append(data[start:end])
+        window_labels.append(labels[start:end][0])  # Assuming one label per window
+    
+    # Convert to numpy arrays
+    windows = np.array(windows)
+    window_labels = np.array(window_labels)    
+    return windows, window_labels
 
 # Band Power - LATER
 # Subband Information Quantity - LATER
 
+############
+windows, window_labels = create_windows(clean_data, labels)
+print(windows[0])
+############
 
 # 3. Dimentionality Reduction (Optional)
 # PCA - LATER
