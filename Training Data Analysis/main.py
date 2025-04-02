@@ -17,7 +17,7 @@ class VA(Enum):
     
 
 # 1. Preprocessing
-# num rows -> 229088/255/60 = 14.97 ie ~15 minutes
+# num rows -> 229077/255/60 = 14.97 ie ~15 minutes
 def load_eeg_data(fp):
     with open(fp, 'r') as f:
         lines = f.readlines()
@@ -30,10 +30,12 @@ def load_eeg_data(fp):
     data = np.loadtxt(StringIO("\n".join(data_lines[6:])), delimiter=',', usecols=range(1, 9))
 
     #print(data[0:5]) # worked
+    print("Loaded Session 1 Data...",data.shape)
     return data
 
 # Notch filter
 def notch_filter(data, fs=250, freq=60, quality=30):
+    print("Applying Notch Filter...")
     # 60Hz notch filter
     b, a = signal.iirnotch(freq, quality, fs)
     return signal.filtfilt(b, a, data, axis=0)
@@ -41,6 +43,7 @@ def notch_filter(data, fs=250, freq=60, quality=30):
 # Bandpass filter (0.1-40Hz)
 def bandpass_filter(data, fs=250, lowcut=0.1, highcut=40, order=4):
     # Butterworth bandpass filter (0.1-40Hz).
+    print("Applying Bandpass Filter")
     nyquist = 0.5 * fs
     low, high = lowcut / nyquist, highcut / nyquist
     b, a = signal.butter(order, [low, high], btype='band')
@@ -48,18 +51,19 @@ def bandpass_filter(data, fs=250, lowcut=0.1, highcut=40, order=4):
 
 # Label Data
 def label_data(total_samples, fs=250):
+    print("Labeling Data...")
     labels = []
-    section_labels = [ VA.HVHA, VA.NEUT, VA.HVLA, VA.NEUT, VA.LVHA,
+    session1_labels = [ VA.HVHA, VA.NEUT, VA.HVLA, VA.NEUT, VA.LVHA,
                       VA.NEUT, VA.LVLA, VA.NEUT, VA.HVHA, VA.NEUT,
-                      VA.HALV, VA.NEUT, VA.HALV, VA.NEUT, VA.LVLA ]
+                      VA.LVHA, VA.NEUT, VA.LVHA, VA.NEUT, VA.LVLA ]
     
-    #form_labels = ["happy", "rest", "tired/relax", "rest", "angry/stressed", 
-    #                "rest", "sad", "rest", "happy/excited", "rest",
-    #                "angry", "rest", "scared/stressed/angry", "rest", "sad"]
+    '''form_labels = ["happy", "rest", "tired/relax", "rest", "angry/stressed", 
+                    "rest", "sad", "rest", "happy/excited", "rest",
+                   "angry", "rest", "scared/stressed/angry", "rest", "sad"] '''
     
     samples_per_section = fs * 60  # 1-minute sections (15,000 samples per section)
     
-    for i, label in enumerate(section_labels):
+    for i, label in enumerate(session1_labels):
         labels.extend([label] * samples_per_section)
     
     return np.array(labels[:total_samples])
@@ -67,32 +71,36 @@ def label_data(total_samples, fs=250):
 # Normalize
 def normalize_data(data):
     # Normalize EEG data (zero mean, unit variance).
+    print("Normalizing Data...")
     return (data - np.mean(data, axis=0)) / np.std(data, axis=0)
 
 ############
-
 fp = "Data/Session1/OpenBCI-RAW-2025-03-07_19-34-48.csv"
-load_eeg_data(fp)
-
-
+data = load_eeg_data(fp)
+print(data[0:1])
+n_data = notch_filter(data)
+print(n_data[0:2])
+bp_data = bandpass_filter(n_data)
+print(bp_data[0:2])
+l_data = label_data(bp_data.shape[0])
 ############
-
-
-#############################################
 
 # 2. Feature Extraction
 
-# Band Power
-
-# Subband Information Quantity
-
 # 3 Second sliding window (no overlap)
+def create_windows(data, labels, window_size=750, stride=750):
+    pass
 
+############
+
+############
+
+# Band Power - LATER
+# Subband Information Quantity - LATER
 
 
 # 3. Dimentionality Reduction (Optional)
-
-# PCA
+# PCA - LATER
 
 
 
