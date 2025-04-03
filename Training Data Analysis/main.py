@@ -123,13 +123,60 @@ print(windows[0])
 
 
 # 4. CNN Model Preperation
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout
+from tensorflow.keras.utils import to_categorical
+from sklearn.model_selection import train_test_split
 
 # Reshape
+# (samples, channels, time, 1)
+def reshape_for_cnn(windows):
+    print("Reshaping Data...")
+    # expected CNN shape: (samples, channels, time, 1)
+    num_samples, time_steps, channels = windows.shape
+    return windows.reshape(num_samples, channels, time_steps, 1)  # Add 1 for 'channel' dimension
 
-# Design CNN
+def encode_labels(labels):
+    print("Encoding (One-Hot-Encoding)...")
+    # Convert labels to categorical encoding.
+    unique_labels = list(set(labels))  # Extract unique labels
+    label_map = {label: i for i, label in enumerate(unique_labels)}
+    encoded_labels = np.array([label_map[label] for label in labels])
+    return to_categorical(encoded_labels, num_classes=len(unique_labels)), label_map
 
-# Train and Validate
+# Design CNN - IMPORTANT
+def build_cnn(input_shape, num_classes):
+    print("Building CNN...")
+    model = Sequential([
+        Conv2D(32, (3, 3), activation='relu', input_shape=input_shape, padding='same'),
+        MaxPooling2D((2, 2)),
+        Conv2D(64, (3, 3), activation='relu', padding='same'),
+        MaxPooling2D((2, 2)),
+        Flatten(),
+        Dense(128, activation='relu'),
+        Dropout(0.5),
+        Dense(num_classes, activation='softmax')
+    ])
+    model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+    return model
 
+# Train and Validate - later
 
+############
+windows = reshape_for_cnn(windows)  # Assuming 'windows' is created earlier
+encoded_labels, label_map = encode_labels(window_labels)
+
+# split Data
+X_train, X_test, y_train, y_test = train_test_split(windows, encoded_labels, test_size=0.2, random_state=42)
+
+# build and train CNN
+input_shape = X_train.shape[1:]  # (channels, time, 1)
+num_classes = len(label_map)
+
+cnn_model = build_cnn(input_shape, num_classes)
+cnn_model.fit(X_train, y_train, epochs=10, batch_size=32, validation_data=(X_test, y_test))
+
+############
 
 # 5. Evaluation
