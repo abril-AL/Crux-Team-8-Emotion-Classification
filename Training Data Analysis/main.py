@@ -3,9 +3,12 @@
 # Date: 04/02/2025                        #
 # Author: Abril Aguilar-Lopez             #
 ###########################################
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Suppress TensorFlow warnings (INFO, WARNING, and ERROR)
 import numpy as np
 import scipy.signal as signal
 from io import StringIO
+
 
 from enum import Enum
 class VA(Enum):
@@ -14,7 +17,6 @@ class VA(Enum):
     HVLA = 2 # calm  relaxed content
     LVHA = 3 # tense angry frustrated
     LVLA = 4 # depressed bored tired
-    
 
 # 1. Preprocessing
 # num rows -> 229077/255/60 = 14.97 ie ~15 minutes
@@ -114,7 +116,7 @@ def create_windows(data, labels, window_size=765, stride=765):
 
 ############
 windows, window_labels = create_windows(clean_data, labels)
-print(windows[0])
+#print(windows[0])
 ############
 
 # 3. Dimentionality Reduction (Optional)
@@ -169,14 +171,116 @@ encoded_labels, label_map = encode_labels(window_labels)
 
 # split Data
 X_train, X_test, y_train, y_test = train_test_split(windows, encoded_labels, test_size=0.2, random_state=42)
-
 # build and train CNN
 input_shape = X_train.shape[1:]  # (channels, time, 1)
 num_classes = len(label_map)
-
 cnn_model = build_cnn(input_shape, num_classes)
 cnn_model.fit(X_train, y_train, epochs=10, batch_size=32, validation_data=(X_test, y_test))
-
 ############
 
 # 5. Evaluation
+
+import matplotlib
+matplotlib.use('Agg') # non interactive
+import matplotlib.pyplot as plt
+
+def plot_eeg_signals(raw_data, filtered_data, num_channels=4, fs=250, duration=5, save=False):
+    time = np.arange(0, duration, 1/fs)
+
+    plt.figure(figsize=(12, 8))
+    for i in range(num_channels):
+        plt.subplot(num_channels, 1, i+1)
+        plt.plot(time[:len(raw_data[:fs*duration, i])], raw_data[:fs*duration, i], label='Raw', alpha=0.6)
+        plt.plot(time[:len(filtered_data[:fs*duration, i])], filtered_data[:fs*duration, i], label='Filtered', alpha=0.8)
+        plt.title(f'Channel {i+1} EEG Signal')
+        plt.xlabel('Time (s)')
+        plt.ylabel('Amplitude')
+        plt.legend()
+
+    plt.tight_layout()
+    
+    if save:
+        plt.savefig("eeg_signals.png", dpi=300)
+    else:
+        plt.show()
+
+plot_eeg_signals(data, clean_data, save=True)  # Saves the plot
+
+
+# is data set balanced?
+from collections import Counter
+
+# Count occurrences of each label
+label_counts = Counter(window_labels)
+labels, counts = zip(*label_counts.items())
+
+plt.figure(figsize=(8, 5))
+plt.bar([va.name for va in labels], counts, color='c')
+plt.xlabel("Emotion Classes")
+plt.ylabel("Count")
+plt.title("Class Distribution in EEG Data")
+plt.xticks(rotation=25)
+
+plt.savefig("class_distribution.png", dpi=300)  # Saves the plot
+#plt.show()
+
+
+# CNN training perf
+def plot_training_history(history, save=False):
+    plt.figure(figsize=(12, 5))
+
+    plt.subplot(1, 2, 1)
+    plt.plot(history.history['loss'], label='Train Loss', color='r')
+    plt.plot(history.history['val_loss'], label='Validation Loss', color='b')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.title('Loss Over Epochs')
+    plt.legend()
+
+    plt.subplot(1, 2, 2)
+    plt.plot(history.history['accuracy'], label='Train Accuracy', color='g')
+    plt.plot(history.history['val_accuracy'], label='Validation Accuracy', color='orange')
+    plt.xlabel('Epochs')
+    plt.ylabel('Accuracy')
+    plt.title('Accuracy Over Epochs')
+    plt.legend()
+
+    plt.tight_layout()
+    
+    if save:
+        plt.savefig("training_history.png", dpi=300)
+    else:
+        plt.show()
+
+plot_training_history(cnn_model.history, save=True)
+
+# band power over time
+from scipy.signal import welch
+
+def plot_band_power(data, fs=250, channel=0, save=False):
+    f, psd = welch(data[:, channel], fs, nperseg=fs*2)
+
+    bands = {
+        "Delta (0.5-4 Hz)": (0.5, 4),
+        "Theta (4-8 Hz)": (4, 8),
+        "Alpha (8-12 Hz)": (8, 12),
+        "Beta (12-30 Hz)": (12, 30),
+        "Gamma (30-40 Hz)": (30, 40)
+    }
+
+    plt.figure(figsize=(10, 5))
+    for band, (low, high) in bands.items():
+        mask = (f >= low) & (f <= high)
+        plt.fill_between(f[mask], psd[mask], label=band, alpha=0.6)
+
+    plt.xlabel("Frequency (Hz)")
+    plt.ylabel("Power Spectral Density")
+    plt.title(f"EEG Band Power (Channel {channel+1})")
+    plt.legend()
+    
+    if save:
+        plt.savefig(f"eeg_band_power_channel_{channel+1}.png", dpi=300)
+    else:
+        plt.show()
+
+plot_band_power(clean_data, save=True)
