@@ -1,8 +1,9 @@
 from indiv_analysis import VA, load_eeg_data, notch_filter, bandpass_filter, normalize_data, create_windows
+from features import EEGFeatureExtractor
 import numpy as np
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout
+from tensorflow.keras.layers import Dense, Dropout
 from tensorflow.keras.utils import to_categorical
 from collections import Counter
 import matplotlib.pyplot as plt
@@ -50,8 +51,7 @@ def label_data_navya(total_samples, fs=255):
     
     return np.array(labels[:total_samples])
 
-def label_data_sofiam(total_samples, fs=255):
-    # TODO 
+def label_data_sofiam(total_samples, fs=255): 
     session_durations = [120,60,120,60,120,60,120,60,120,60,145,60,186,60,120,60] # sec
     session_labels = [VA.HVHA,VA.NEUT, VA.HVLA, VA.NEUT, VA.LVHA, 
                       VA.NEUT, VA.LVHA, VA.NEUT, VA.HVLA, VA.NEUT, 
@@ -76,67 +76,24 @@ def label_data_sofiam(total_samples, fs=255):
 
     return np.array(labels[:total_samples])
 
-def get_unified_label_mapping(all_window_labels):
-    """Create a label mapping that covers all classes across all datasets"""
-    all_labels = []
-    for window_labels in all_window_labels:
-        all_labels.extend(window_labels)
-    unique_labels = list(set(all_labels))
-    return {label: i for i, label in enumerate(unique_labels)}
+#############################################
 
-def reshape_and_encode(windows, window_labels, label_map=None):
-    """Reshape windows for CNN and encode labels using provided mapping"""
-    # Reshape for CNN: (samples, channels, time, 1)
-    reshaped = windows.reshape(windows.shape[0], windows.shape[2], windows.shape[1], 1)
-    
-    # Create label mapping if not provided
-    if label_map is None:
-        unique_labels = list(set(window_labels))
-        label_map = {label: i for i, label in enumerate(unique_labels)}
-    
-    # Encode labels
-    encoded_labels = np.array([label_map[label] for label in window_labels])
-    return reshaped, to_categorical(encoded_labels, num_classes=len(label_map)), label_map
-
-def build_cnn(input_shape, num_classes):
-    """Build and compile CNN model with standardized architecture"""
+def build_feature_model(input_shape, num_classes):
     model = Sequential([
-        Conv2D(32, (3, 3), activation='relu', input_shape=input_shape, padding='same'),
-        MaxPooling2D((2, 2)),
-        Conv2D(64, (3, 3), activation='relu', padding='same'),
-        MaxPooling2D((2, 2)),
-        Flatten(),
-        Dense(128, activation='relu'),
+        Dense(256, activation='relu', input_shape=input_shape),
         Dropout(0.5),
+        Dense(128, activation='relu'),
+        Dropout(0.3),
+        Dense(64, activation='relu'),
         Dense(num_classes, activation='softmax')
     ])
-    model.compile(optimizer='adam', 
-                 loss='categorical_crossentropy', 
+    model.compile(optimizer='adam',
+                 loss='categorical_crossentropy',
                  metrics=['accuracy'])
     return model
 
-def preprocess_data(data, labels):
-    """Apply all preprocessing steps to a single dataset"""
-    data = notch_filter(data)
-    data = bandpass_filter(data)
-    data = normalize_data(data)
-    windows, window_labels = create_windows(data, labels)
-    return windows, window_labels
-
-def plot_class_distribution(labels, name):
-    """Plot distribution of classes"""
-    label_counts = Counter(labels)
-    labels_, counts = zip(*label_counts.items())
-    plt.figure(figsize=(8, 5))
-    plt.bar([va.name for va in labels_], counts, color='c')
-    plt.xlabel("Emotion Classes")
-    plt.ylabel("Count")
-    plt.title(f"Class Distribution ({name})")
-    plt.xticks(rotation=25)
-    plt.show()
-
 def main():
-    # Load and label all datasets
+    # Load and label data
     gd = load_eeg_data("Data/Grace/grace.csv")
     gd_label = label_data_grace(gd.shape[0])
     
@@ -148,53 +105,50 @@ def main():
     smd = np.vstack((sd1, sd2))
     smd_label = label_data_sofiam(smd.shape[0])
 
-    # First pass: preprocess all data and collect labels
-    all_window_labels = []
-    preprocessed = []
-    
-    for data, label in zip([gd, nd, smd], [gd_label, nd_label, smd_label]):
-        windows, window_labels = preprocess_data(data, label)
-        preprocessed.append((windows, window_labels))
-        all_window_labels.append(window_labels)
-    
-    # Create unified label mapping
-    unified_label_map = get_unified_label_mapping(all_window_labels)
-    print(f"Unified label mapping: {unified_label_map}")
-    
-    # Second pass: reshape and encode with unified mapping
-    all_data = []
+    # Initialize feature extractor
+    feature_extractor = EEGFeatureExtractor()
+
+    # Process each dataset
+    all_features = []
     all_labels = []
     
-    for windows, window_labels in preprocessed:
-        reshaped, encoded, _ = reshape_and_encode(windows, window_labels, unified_label_map)
-        all_data.append(reshaped)
-        all_labels.append(encoded)
-        plot_class_distribution(window_labels, "Dataset")
-    
-    # Combine all datasets
-    X = np.concatenate(all_data, axis=0)
-    y = np.concatenate(all_labels, axis=0)
+    for data, label in zip([gd, nd, smd], [gd_label, nd_label, smd_label]):
+        # Basic preprocessing
+        data = notch_filter(data)
+        data = bandpass_filter(data)
+        data = normalize_data(data)
+        
+        # Create windows and extract features
+        windows, window_labels = create_windows(data, label)
+        features = feature_extractor.extract_all_features(windows)
+        
+        all_features.append(features)
+        all_labels.append(window_labels)
 
-    # Split into train and test sets
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42
-    )
+    # Combine datasets
+    X = np.concatenate(all_features)
+    y = np.concatenate(all_labels)
+    
+    # Encode labels
+    unique_labels = list(set(y))
+    label_map = {label: i for i, label in enumerate(unique_labels)}
+    y = np.array([label_map[label] for label in y])
+    y = to_categorical(y, num_classes=len(unique_labels))
+
+    # Train/test split
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
     # Build and train model
-    input_shape = X_train.shape[1:]
-    num_classes = y_train.shape[1]
-    
-    model = build_cnn(input_shape, num_classes)
-    history = model.fit(
-        X_train, y_train,
-        epochs=10,
-        batch_size=32,
-        validation_data=(X_test, y_test)
-    )
+    model = build_feature_model((X_train.shape[1],), len(unique_labels))
+    history = model.fit(X_train, y_train, 
+                       epochs=50, 
+                       batch_size=32,
+                       validation_data=(X_test, y_test),
+                       verbose=1)
 
-    # Evaluate model
+    # Evaluate
     loss, accuracy = model.evaluate(X_test, y_test)
-    print(f"Test Accuracy: {accuracy*100:.2f}%")
+    print(f"\nTest Accuracy: {accuracy*100:.2f}%")
 
 if __name__ == "__main__":
     main()
