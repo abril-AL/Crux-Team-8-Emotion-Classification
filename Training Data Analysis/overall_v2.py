@@ -7,6 +7,7 @@ from tensorflow.keras.layers import Dense, Dropout
 from tensorflow.keras.utils import to_categorical
 from collections import Counter
 import matplotlib.pyplot as plt
+import time
 
 def label_data_grace(total_samples, fs=255):
     session_labels = [VA.HVHA, VA.NEUT, VA.HVLA, VA.NEUT, VA.LVHA,
@@ -93,6 +94,7 @@ def build_feature_model(input_shape, num_classes):
     return model
 
 def main():
+    start_main = time()
     # Load and label data
     gd = load_eeg_data("Data/Grace/grace.csv")
     gd_label = label_data_grace(gd.shape[0])
@@ -120,7 +122,9 @@ def main():
         
         # Create windows and extract features
         windows, window_labels = create_windows(data, label)
+        start = time.time()
         features = feature_extractor.extract_all_features(windows)
+        print("Feature extraction took", time.time() - start, "seconds")
         
         all_features.append(features)
         all_labels.append(window_labels)
@@ -149,6 +153,8 @@ def main():
     # Evaluate
     loss, accuracy = model.evaluate(X_test, y_test)
     print(f"\nTest Accuracy: {accuracy*100:.2f}%")
+
+    print("Feature extraction took", time.time() - start_main, "seconds")
 
 if __name__ == "__main__":
     main()

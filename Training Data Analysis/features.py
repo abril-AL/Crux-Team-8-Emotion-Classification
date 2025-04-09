@@ -2,6 +2,7 @@ import numpy as np
 from scipy.signal import welch, hilbert
 from scipy.stats import pearsonr, entropy, skew, kurtosis
 from sklearn.preprocessing import StandardScaler
+from joblib import Parallel, delayed  
 
 class EEGFeatureExtractor:
     def __init__(self, fs=255):
@@ -76,11 +77,21 @@ class EEGFeatureExtractor:
         ])
 
     def extract_all_features(self, eeg_windows):
-        """Extract and scale features for multiple windows"""
-        features = np.array([self.extract_window_features(w) for w in eeg_windows])
+        """Extract and scale features for multiple windows using parallel processing"""
+        from joblib import Parallel, delayed
+
+        # Parallel execution of feature extraction for each window
+        features = Parallel(n_jobs=-1, backend="loky")(
+            delayed(self.extract_window_features)(w) for w in eeg_windows
+        )
+
+        features = np.array(features)
+
+        # Scaling
         if not self.fitted:
             features = self.scaler.fit_transform(features)
             self.fitted = True
         else:
             features = self.scaler.transform(features)
+
         return features

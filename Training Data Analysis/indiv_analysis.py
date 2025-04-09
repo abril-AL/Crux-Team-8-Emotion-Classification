@@ -64,6 +64,9 @@ def normalize_data(data):
 def create_windows(data, labels, window_size=765, stride=765):
     # 250 * 3 = 750 samples per window, associated w single label (first sample in that window)
     print("Dividing into 3s windows...")
+    # if data has (N,8) shape - doing N/765 slices and label lookups
+    # fast with np arrays
+    
     num_samples = len(data)
     windows = []
     window_labels = []
