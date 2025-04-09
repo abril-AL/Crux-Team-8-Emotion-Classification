@@ -23,7 +23,8 @@ class VA(Enum):
 def load_eeg_data(fp):
     with open(fp, 'r') as f:
         lines = f.readlines()
-    cleaned_lines = [line[1:] for line in lines] # csv conversion had " at the start
+    #cleaned_lines = [line[1:] for line in lines] # csv conversion had " at the start
+    cleaned_lines = lines
 
     # Remove header lines that start with '%'
     data_lines = [line for line in cleaned_lines if not line.startswith('%')] # skip the first 4 lines of comments in csv
@@ -53,7 +54,7 @@ def bandpass_filter(data, fs=255, lowcut=0.1, highcut=40, order=4):
 
 # Label Data
 def label_data(total_samples, fs=255):
-    print("Labeling Data...")
+    print("SHOULD NOT CALL")
     labels = []
     session1_labels = [ VA.HVHA, VA.NEUT, VA.HVLA, VA.NEUT, VA.LVHA,
                       VA.NEUT, VA.LVLA, VA.NEUT, VA.HVHA, VA.NEUT,
@@ -77,7 +78,8 @@ def normalize_data(data):
     return (data - np.mean(data, axis=0)) / np.std(data, axis=0)
 
 ############
-fp = "Data/Session1/OpenBCI-RAW-2025-03-07_19-34-48.csv"
+'''fp = "Data/Grace/grace.csv"
+#fp = "Data/Navya/navya.csv"
 data = load_eeg_data(fp)
 #print(data[0:1])
 n_data = notch_filter(data)
@@ -88,7 +90,7 @@ labels = label_data(bp_data.shape[0])
 print("Labels:", labels.shape)
 clean_data = bp_data # note: py ref copied not data
 print(f"Data shape: {clean_data.shape}")
-print(f"Labels shape: {labels.shape}")
+print(f"Labels shape: {labels.shape}")'''
 ############
 
 # 2. Feature Extraction
@@ -115,8 +117,8 @@ def create_windows(data, labels, window_size=765, stride=765):
 # Subband Information Quantity - LATER
 
 ############
-windows, window_labels = create_windows(clean_data, labels)
-#print(windows[0])
+'''windows, window_labels = create_windows(clean_data, labels)
+'''#print(windows[0])
 ############
 
 # 3. Dimentionality Reduction (Optional)
@@ -166,7 +168,7 @@ def build_cnn(input_shape, num_classes):
 # Train and Validate - later
 
 ############
-windows = reshape_for_cnn(windows)  # Assuming 'windows' is created earlier
+'''windows = reshape_for_cnn(windows)  # Assuming 'windows' is created earlier
 encoded_labels, label_map = encode_labels(window_labels)
 
 # split Data
@@ -175,7 +177,7 @@ X_train, X_test, y_train, y_test = train_test_split(windows, encoded_labels, tes
 input_shape = X_train.shape[1:]  # (channels, time, 1)
 num_classes = len(label_map)
 cnn_model = build_cnn(input_shape, num_classes)
-cnn_model.fit(X_train, y_train, epochs=10, batch_size=32, validation_data=(X_test, y_test))
+cnn_model.fit(X_train, y_train, epochs=10, batch_size=32, validation_data=(X_test, y_test))'''
 ############
 
 # 5. Evaluation
@@ -204,26 +206,8 @@ def plot_eeg_signals(raw_data, filtered_data, num_channels=4, fs=250, duration=5
     else:
         plt.show()
 
-plot_eeg_signals(data, clean_data, save=True)  # Saves the plot
-
-
 # is data set balanced?
 from collections import Counter
-
-# Count occurrences of each label
-label_counts = Counter(window_labels)
-labels, counts = zip(*label_counts.items())
-
-plt.figure(figsize=(8, 5))
-plt.bar([va.name for va in labels], counts, color='c')
-plt.xlabel("Emotion Classes")
-plt.ylabel("Count")
-plt.title("Class Distribution in EEG Data")
-plt.xticks(rotation=25)
-
-plt.savefig("class_distribution.png", dpi=300)  # Saves the plot
-#plt.show()
-
 
 # CNN training perf
 def plot_training_history(history, save=False):
@@ -251,8 +235,6 @@ def plot_training_history(history, save=False):
         plt.savefig("training_history.png", dpi=300)
     else:
         plt.show()
-
-plot_training_history(cnn_model.history, save=True)
 
 # band power over time
 from scipy.signal import welch
@@ -283,4 +265,72 @@ def plot_band_power(data, fs=250, channel=0, save=False):
     else:
         plt.show()
 
-plot_band_power(clean_data, save=True)
+
+def run_pipeline(fp, name, label_func):
+    print(f"\nRunning pipeline for: {fp}")
+    print("=" * 60)
+    
+    data = load_eeg_data(fp)
+    n_data = notch_filter(data)
+    bp_data = bandpass_filter(n_data)
+    
+    labels = label_func(bp_data.shape[0])
+    
+    clean_data = bp_data
+    
+    windows, window_labels = create_windows(clean_data, labels)
+    windows = reshape_for_cnn(windows)
+    encoded_labels, label_map = encode_labels(window_labels)
+
+    X_train, X_test, y_train, y_test = train_test_split(windows, encoded_labels, test_size=0.2, random_state=42)
+    input_shape = X_train.shape[1:]
+    num_classes = len(label_map)
+
+    cnn_model = build_cnn(input_shape, num_classes)
+    history = cnn_model.fit(X_train, y_train, epochs=10, batch_size=32, validation_data=(X_test, y_test))
+
+    plot_eeg_signals(data, clean_data, save=True)
+    plot_training_history(history, save=True)
+    plot_band_power(clean_data, save=True)
+
+    # Class distribution plot
+    from collections import Counter
+    label_counts = Counter(window_labels)
+    labels_, counts = zip(*label_counts.items())
+    plt.figure(figsize=(8, 5))
+    plt.bar([va.name for va in labels_], counts, color='c')
+    plt.xlabel("Emotion Classes")
+    plt.ylabel("Count")
+    plt.title(f"Class Distribution in EEG Data ({name})")
+    plt.xticks(rotation=25)
+    plt.savefig(f"class_distribution_{name}.png", dpi=300)
+
+def label_data_grace(total_samples, fs=255):
+    session_labels = [VA.HVHA, VA.NEUT, VA.HVLA, VA.NEUT, VA.LVHA,
+                      VA.NEUT, VA.LVLA, VA.NEUT, VA.HVHA, VA.NEUT,
+                      VA.LVHA, VA.NEUT, VA.LVHA, VA.NEUT, VA.LVLA]
+    samples_per_section = fs * 60
+    labels = []
+    for label in session_labels:
+        labels.extend([label] * samples_per_section)
+    return np.array(labels[:total_samples])
+
+def label_data_navya(total_samples, fs=255):
+    session_durations = [45, 30, 60, 45, 30, 60, 30, 30, 45, 30, 60, 30, 60, 30, 60]  # in seconds
+    session_labels = [VA.HVHA, VA.NEUT, VA.HVLA, VA.NEUT, VA.LVHA,
+                      VA.NEUT, VA.LVLA, VA.NEUT, VA.HVHA, VA.NEUT,
+                      VA.LVHA, VA.NEUT, VA.LVHA, VA.NEUT, VA.LVLA]
+
+    labels = []
+    for dur, label in zip(session_durations, session_labels):
+        labels.extend([label] * (fs * dur))
+
+    # Pad or truncate as needed
+    if len(labels) < total_samples:
+        last_label = labels[-1]
+        labels.extend([last_label] * (total_samples - len(labels)))
+    return np.array(labels[:total_samples])
+
+
+run_pipeline("Data/Grace/grace.csv", "grace", label_data_grace)
+run_pipeline("Data/Navya/navya.csv", "navya", label_data_navya)
