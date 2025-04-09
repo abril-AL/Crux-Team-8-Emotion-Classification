@@ -8,6 +8,7 @@ from tensorflow.keras.utils import to_categorical
 from collections import Counter
 import matplotlib.pyplot as plt
 import time
+from indiv_analysis import plot_training_history, plot_prediction_distribution
 
 def label_data_grace(total_samples, fs=255):
     session_labels = [VA.HVHA, VA.NEUT, VA.HVLA, VA.NEUT, VA.LVHA,
@@ -104,7 +105,7 @@ def main(filter_neutral=True):
     
     sd1 = load_eeg_data("Data/SofiaM/sofiam_1.csv")
     sd2 = load_eeg_data("Data/SofiaM/sofiam_2.csv")
-    smd = np.vstack((sd1, sd2))
+    smd = np.vstack((sd1, sd2)) # because data collection was interupted
     smd_label = label_data_sofiam(smd.shape[0])
 
     # Initialize feature extractor
@@ -152,7 +153,7 @@ def main(filter_neutral=True):
     y = to_categorical(y, num_classes=len(unique_labels))
 
     # Train/test split
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.4, random_state=42)
 
     # Build and train model
     model = build_feature_model((X_train.shape[1],), len(unique_labels))
@@ -166,7 +167,12 @@ def main(filter_neutral=True):
     loss, accuracy = model.evaluate(X_test, y_test)
     print(f"\nTest Accuracy: {accuracy*100:.2f}%")
 
-    print("Feature extraction took", time.time() - start_main, "seconds")
+    plot_training_history(history, save_path_prefix="feature_model")
+    plot_prediction_distribution(model, X_test, y_test, label_map)
+
+    model.save("feature_model.keras")
+
+    print("Total Main Time:", time.time() - start_main, "seconds")
 
 if __name__ == "__main__":
-    main(filter_neutral=True)
+    main(filter_neutral=False)

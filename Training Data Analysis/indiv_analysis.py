@@ -152,39 +152,39 @@ def plot_eeg_signals(raw_data, filtered_data, num_channels=4, fs=250, duration=5
     else:
         plt.show()
 
-# is data set balanced?
+# CNN training perf
+import matplotlib.pyplot as plt
+from collections import Counter
+from scipy.signal import welch
+import numpy as np
 from collections import Counter
 
-# CNN training perf
-def plot_training_history(history, save=False):
+def plot_training_history(history, save_path_prefix="training_plot"):
+    # Plot accuracy
     plt.figure(figsize=(12, 5))
 
     plt.subplot(1, 2, 1)
-    plt.plot(history.history['loss'], label='Train Loss', color='r')
-    plt.plot(history.history['val_loss'], label='Validation Loss', color='b')
-    plt.xlabel('Epochs')
-    plt.ylabel('Loss')
-    plt.title('Loss Over Epochs')
-    plt.legend()
-
-    plt.subplot(1, 2, 2)
-    plt.plot(history.history['accuracy'], label='Train Accuracy', color='g')
-    plt.plot(history.history['val_accuracy'], label='Validation Accuracy', color='orange')
-    plt.xlabel('Epochs')
+    plt.plot(history.history['accuracy'], label='Train Accuracy', color='blue')
+    plt.plot(history.history['val_accuracy'], label='Val Accuracy', color='orange')
+    plt.title('Accuracy over Epochs')
+    plt.xlabel('Epoch')
     plt.ylabel('Accuracy')
-    plt.title('Accuracy Over Epochs')
+    plt.legend()
+    
+    # Plot loss
+    plt.subplot(1, 2, 2)
+    plt.plot(history.history['loss'], label='Train Loss', color='red')
+    plt.plot(history.history['val_loss'], label='Val Loss', color='purple')
+    plt.title('Loss over Epochs')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
     plt.legend()
 
     plt.tight_layout()
-    
-    if save:
-        plt.savefig("training_history.png", dpi=300)
-    else:
-        plt.show()
+    plt.savefig(f"{save_path_prefix}_history.png", dpi=300)
+    plt.close()
 
 # band power over time
-from scipy.signal import welch
-
 def plot_band_power(data, fs=250, channel=0, save=False):
     f, psd = welch(data[:, channel], fs, nperseg=fs*2)
 
@@ -251,3 +251,21 @@ def run_pipeline(fp, name, label_func, save_plots):
         plt.title(f"Class Distribution in EEG Data ({name})")
         plt.xticks(rotation=25)
         plt.savefig(f"class_distribution_{name}.png", dpi=300)
+
+def plot_prediction_distribution(model, X_test, y_test, label_map, save_path="prediction_dist.png"):
+    y_pred = model.predict(X_test).argmax(axis=1)
+    y_true = y_test.argmax(axis=1)
+
+    classes = [k.name for k in sorted(label_map, key=lambda x: label_map[x])]
+
+    plt.figure(figsize=(10, 4))
+    plt.hist(y_pred, bins=np.arange(len(classes)+1)-0.5, alpha=0.7, label="Predicted", color='orange')
+    plt.hist(y_true, bins=np.arange(len(classes)+1)-0.5, alpha=0.5, label="True", color='blue')
+    plt.xticks(ticks=range(len(classes)), labels=classes, rotation=25)
+    plt.xlabel("Classes")
+    plt.ylabel("Count")
+    plt.title("Prediction vs True Label Distribution")
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=300)
+    plt.close()
