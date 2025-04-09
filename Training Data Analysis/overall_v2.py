@@ -93,8 +93,8 @@ def build_feature_model(input_shape, num_classes):
                  metrics=['accuracy'])
     return model
 
-def main():
-    start_main = time()
+def main(filter_neutral=True):
+    start_main = time.time()
     # Load and label data
     gd = load_eeg_data("Data/Grace/grace.csv")
     gd_label = label_data_grace(gd.shape[0])
@@ -122,12 +122,24 @@ def main():
         
         # Create windows and extract features
         windows, window_labels = create_windows(data, label)
+
+        if filter_neutral:
+            # Filter out NEUT-labeled windows
+            windows, window_labels = zip(*[
+                (w, l) for w, l in zip(windows, window_labels) if l != VA.NEUT
+            ])
+            windows = np.array(windows)
+            window_labels = np.array(window_labels)
+
         start = time.time()
         features = feature_extractor.extract_all_features(windows)
         print("Feature extraction took", time.time() - start, "seconds")
         
         all_features.append(features)
         all_labels.append(window_labels)
+
+    from collections import Counter
+    print("Final label distribution:", Counter(np.concatenate(all_labels)))
 
     # Combine datasets
     X = np.concatenate(all_features)
@@ -157,4 +169,4 @@ def main():
     print("Feature extraction took", time.time() - start_main, "seconds")
 
 if __name__ == "__main__":
-    main()
+    main(filter_neutral=True)
