@@ -33,7 +33,7 @@ def load_eeg_data(fp):
     data = np.loadtxt(StringIO("\n".join(data_lines[6:])), delimiter=',', usecols=range(1, 9))
 
     #print(data[0:5]) # worked
-    print("Loaded Session 1 Data...",data.shape)
+    print("Loaded Data...",data.shape)
     return data
 
 # Notch filter
