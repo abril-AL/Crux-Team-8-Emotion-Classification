@@ -52,46 +52,11 @@ def bandpass_filter(data, fs=255, lowcut=0.1, highcut=40, order=4):
     b, a = signal.butter(order, [low, high], btype='band')
     return signal.filtfilt(b, a, data, axis=0)
 
-# Label Data
-def label_data(total_samples, fs=255):
-    print("SHOULD NOT CALL")
-    labels = []
-    session1_labels = [ VA.HVHA, VA.NEUT, VA.HVLA, VA.NEUT, VA.LVHA,
-                      VA.NEUT, VA.LVLA, VA.NEUT, VA.HVHA, VA.NEUT,
-                      VA.LVHA, VA.NEUT, VA.LVHA, VA.NEUT, VA.LVLA ]
-    
-    '''form_labels = ["happy", "rest", "tired/relax", "rest", "angry/stressed", 
-                    "rest", "sad", "rest", "happy/excited", "rest",
-                   "angry", "rest", "scared/stressed/angry", "rest", "sad"] '''
-    
-    samples_per_section = fs * 60  # 1-minute sections (15,000 samples per section)
-    
-    for i, label in enumerate(session1_labels):
-        labels.extend([label] * samples_per_section)
-    
-    return np.array(labels[:total_samples])
-
 # Normalize
 def normalize_data(data):
     # Normalize EEG data (zero mean, unit variance).
     print("Normalizing Data...")
     return (data - np.mean(data, axis=0)) / np.std(data, axis=0)
-
-############
-'''fp = "Data/Grace/grace.csv"
-#fp = "Data/Navya/navya.csv"
-data = load_eeg_data(fp)
-#print(data[0:1])
-n_data = notch_filter(data)
-#print(n_data[0:2])
-bp_data = bandpass_filter(n_data)
-#print(bp_data[0:2])
-labels = label_data(bp_data.shape[0])
-print("Labels:", labels.shape)
-clean_data = bp_data # note: py ref copied not data
-print(f"Data shape: {clean_data.shape}")
-print(f"Labels shape: {labels.shape}")'''
-############
 
 # 2. Feature Extraction
 
@@ -116,15 +81,8 @@ def create_windows(data, labels, window_size=765, stride=765):
 # Band Power - LATER
 # Subband Information Quantity - LATER
 
-############
-'''windows, window_labels = create_windows(clean_data, labels)
-'''#print(windows[0])
-############
-
 # 3. Dimentionality Reduction (Optional)
 # PCA - LATER
-
-
 
 # 4. CNN Model Preperation
 import tensorflow as tf
@@ -164,21 +122,6 @@ def build_cnn(input_shape, num_classes):
     ])
     model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
     return model
-
-# Train and Validate - later
-
-############
-'''windows = reshape_for_cnn(windows)  # Assuming 'windows' is created earlier
-encoded_labels, label_map = encode_labels(window_labels)
-
-# split Data
-X_train, X_test, y_train, y_test = train_test_split(windows, encoded_labels, test_size=0.2, random_state=42)
-# build and train CNN
-input_shape = X_train.shape[1:]  # (channels, time, 1)
-num_classes = len(label_map)
-cnn_model = build_cnn(input_shape, num_classes)
-cnn_model.fit(X_train, y_train, epochs=10, batch_size=32, validation_data=(X_test, y_test))'''
-############
 
 # 5. Evaluation
 
@@ -265,8 +208,7 @@ def plot_band_power(data, fs=250, channel=0, save=False):
     else:
         plt.show()
 
-
-def run_pipeline(fp, name, label_func):
+def run_pipeline(fp, name, label_func, save_plots):
     print(f"\nRunning pipeline for: {fp}")
     print("=" * 60)
     
@@ -289,48 +231,20 @@ def run_pipeline(fp, name, label_func):
     cnn_model = build_cnn(input_shape, num_classes)
     history = cnn_model.fit(X_train, y_train, epochs=10, batch_size=32, validation_data=(X_test, y_test))
 
-    plot_eeg_signals(data, clean_data, save=True)
-    plot_training_history(history, save=True)
-    plot_band_power(clean_data, save=True)
 
-    # Class distribution plot
-    from collections import Counter
-    label_counts = Counter(window_labels)
-    labels_, counts = zip(*label_counts.items())
-    plt.figure(figsize=(8, 5))
-    plt.bar([va.name for va in labels_], counts, color='c')
-    plt.xlabel("Emotion Classes")
-    plt.ylabel("Count")
-    plt.title(f"Class Distribution in EEG Data ({name})")
-    plt.xticks(rotation=25)
-    plt.savefig(f"class_distribution_{name}.png", dpi=300)
+    if save_plots:
+        plot_eeg_signals(data, clean_data, save=True)
+        plot_training_history(history, save=True)
+        plot_band_power(clean_data, save=True)
 
-def label_data_grace(total_samples, fs=255):
-    session_labels = [VA.HVHA, VA.NEUT, VA.HVLA, VA.NEUT, VA.LVHA,
-                      VA.NEUT, VA.LVLA, VA.NEUT, VA.HVHA, VA.NEUT,
-                      VA.LVHA, VA.NEUT, VA.LVHA, VA.NEUT, VA.LVLA]
-    samples_per_section = fs * 60
-    labels = []
-    for label in session_labels:
-        labels.extend([label] * samples_per_section)
-    return np.array(labels[:total_samples])
-
-def label_data_navya(total_samples, fs=255):
-    session_durations = [45, 30, 60, 45, 30, 60, 30, 30, 45, 30, 60, 30, 60, 30, 60]  # in seconds
-    session_labels = [VA.HVHA, VA.NEUT, VA.HVLA, VA.NEUT, VA.LVHA,
-                      VA.NEUT, VA.LVLA, VA.NEUT, VA.HVHA, VA.NEUT,
-                      VA.LVHA, VA.NEUT, VA.LVHA, VA.NEUT, VA.LVLA]
-
-    labels = []
-    for dur, label in zip(session_durations, session_labels):
-        labels.extend([label] * (fs * dur))
-
-    # Pad or truncate as needed
-    if len(labels) < total_samples:
-        last_label = labels[-1]
-        labels.extend([last_label] * (total_samples - len(labels)))
-    return np.array(labels[:total_samples])
-
-
-run_pipeline("Data/Grace/grace.csv", "grace", label_data_grace)
-run_pipeline("Data/Navya/navya.csv", "navya", label_data_navya)
+        # Class distribution plot
+        from collections import Counter
+        label_counts = Counter(window_labels)
+        labels_, counts = zip(*label_counts.items())
+        plt.figure(figsize=(8, 5))
+        plt.bar([va.name for va in labels_], counts, color='c')
+        plt.xlabel("Emotion Classes")
+        plt.ylabel("Count")
+        plt.title(f"Class Distribution in EEG Data ({name})")
+        plt.xticks(rotation=25)
+        plt.savefig(f"class_distribution_{name}.png", dpi=300)
