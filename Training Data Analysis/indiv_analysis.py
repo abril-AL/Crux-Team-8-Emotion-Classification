@@ -5,10 +5,18 @@
 ###########################################
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Suppress TensorFlow warnings (INFO, WARNING, and ERROR)
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout
+from tensorflow.keras.utils import to_categorical
+from sklearn.model_selection import train_test_split
+import matplotlib.pyplot as plt
+plt.use('Agg') # non interactive
+from collections import Counter
+from scipy.signal import welch
 import numpy as np
 import scipy.signal as signal
 from io import StringIO
-
 
 from enum import Enum
 class VA(Enum):
@@ -88,11 +96,6 @@ def create_windows(data, labels, window_size=765, stride=765):
 # PCA - LATER
 
 # 4. CNN Model Preperation
-import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout
-from tensorflow.keras.utils import to_categorical
-from sklearn.model_selection import train_test_split
 
 # Reshape
 # (samples, channels, time, 1)
@@ -128,10 +131,6 @@ def build_cnn(input_shape, num_classes):
 
 # 5. Evaluation
 
-import matplotlib
-matplotlib.use('Agg') # non interactive
-import matplotlib.pyplot as plt
-
 def plot_eeg_signals(raw_data, filtered_data, num_channels=4, fs=250, duration=5, save=False):
     time = np.arange(0, duration, 1/fs)
 
@@ -153,12 +152,6 @@ def plot_eeg_signals(raw_data, filtered_data, num_channels=4, fs=250, duration=5
         plt.show()
 
 # CNN training perf
-import matplotlib.pyplot as plt
-from collections import Counter
-from scipy.signal import welch
-import numpy as np
-from collections import Counter
-
 def plot_training_history(history, save_path_prefix="training_plot"):
     # Plot accuracy
     plt.figure(figsize=(12, 5))
