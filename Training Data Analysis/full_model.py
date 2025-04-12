@@ -10,6 +10,9 @@ import matplotlib.pyplot as plt
 import time
 from indiv_analysis import plot_training_history, plot_prediction_distribution
 
+#############################################
+# Custom Labeling Functions
+
 def label_data_grace(total_samples, fs=255):
     session_labels = [VA.HVHA, VA.NEUT, VA.HVLA, VA.NEUT, VA.LVHA,
                       VA.NEUT, VA.LVLA, VA.NEUT, VA.HVHA, VA.NEUT,
@@ -20,6 +23,7 @@ def label_data_grace(total_samples, fs=255):
         labels.extend([label] * samples_per_section)
     
     if len(labels) > total_samples:
+        print("TRUNCATE: labels:",len(labels),"Total samples", total_samples)
         excess = len(labels) - total_samples
         indices_to_remove = np.random.choice(len(labels), excess, replace=False)
         labels = np.delete(labels, indices_to_remove)
@@ -41,10 +45,12 @@ def label_data_navya(total_samples, fs=255):
 
     # Pad or truncate as needed
     if len(labels) < total_samples:
+        print("PAD: labels:",len(labels),"Total samples", total_samples)
         last_label = labels[-1]
         labels.extend([last_label] * (total_samples - len(labels)))
     
     if len(labels) > total_samples:
+        print("TRUNCATE: labels:",len(labels),"Total samples", total_samples)
         excess = len(labels) - total_samples
         indices_to_remove = np.random.choice(len(labels), excess, replace=False)
         labels = np.delete(labels, indices_to_remove)
@@ -55,6 +61,7 @@ def label_data_navya(total_samples, fs=255):
 
 def label_data_sofiam(total_samples, fs=255): 
     session_durations = [120,60,120,60,120,60,120,60,120,60,145,60,186,60,120,60] # sec
+    print(">label SM: ",sum(session_durations), "sec", sum(session_durations)/60, "min, total samples:" ,total_samples)
     session_labels = [VA.HVHA,VA.NEUT, VA.HVLA, VA.NEUT, VA.LVHA, 
                       VA.NEUT, VA.LVHA, VA.NEUT, VA.HVLA, VA.NEUT, 
                       VA.HVHA, VA.NEUT, VA.LVHA, VA.NEUT, VA.HVHA, VA.NEUT]
@@ -65,11 +72,12 @@ def label_data_sofiam(total_samples, fs=255):
 
     # Pad or truncate as needed
     if len(labels) < total_samples:
-        print("labels:",len(labels),"Total samples", total_samples)
+        print("PAD: labels:",len(labels),"Total samples", total_samples)
         last_label = labels[-1]
         labels.extend([last_label] * (total_samples - len(labels)))
 
     if len(labels) > total_samples:
+        print("TRUNCATE: labels:",len(labels),"Total samples", total_samples)
         excess = len(labels) - total_samples
         indices_to_remove = np.random.choice(len(labels), excess, replace=False)
         labels = np.delete(labels, indices_to_remove)
@@ -78,7 +86,34 @@ def label_data_sofiam(total_samples, fs=255):
 
     return np.array(labels[:total_samples])
 
+def label_data_sofias(total_samples, fs=255):
+    session_durations = [120,60, 120,60, 120,60, 120,60, 120,60, 120,60, 120,60, 120,60, 120,60, 120,60] # TODO 
+    session_labels = [VA.HVHA,VA.NEUT, VA.HVLA, VA.NEUT, VA.LVHA, 
+                      VA.NEUT, VA.LVLA, VA.NEUT, VA.HVLA, VA.NEUT, 
+                      VA.HVHA, VA.NEUT, VA.LVLA, VA.NEUT, VA.LVHA, VA.NEUT] # TODO 
+
+    labels = []
+    for dur, label in zip(session_durations, session_labels):
+        labels.extend([label] * (fs * dur))
+
+    # Pad or truncate as needed
+    if len(labels) < total_samples:
+        print("PAD: labels:",len(labels),"Total samples", total_samples)
+        last_label = labels[-1]
+        labels.extend([last_label] * (total_samples - len(labels)))
+
+    if len(labels) > total_samples:
+        print("TRUNCATE: labels:",len(labels),"Total samples", total_samples)
+        excess = len(labels) - total_samples
+        indices_to_remove = np.random.choice(len(labels), excess, replace=False)
+        labels = np.delete(labels, indices_to_remove)
+    
+    print("Sofia S: ",len(labels), total_samples)
+
+    return np.array(labels[:total_samples])
+
 #############################################
+# Building the Model 
 
 def build_feature_model(input_shape, num_classes):
     model = Sequential([
@@ -94,8 +129,11 @@ def build_feature_model(input_shape, num_classes):
                  metrics=['accuracy'])
     return model
 
+#############################################
 def main(filter_neutral=True):
     start_main = time.time()
+    
+    #####################
     # Load and label data
     gd = load_eeg_data("Data/Grace/grace.csv")
     gd_label = label_data_grace(gd.shape[0])
@@ -108,14 +146,19 @@ def main(filter_neutral=True):
     smd = np.vstack((sd1, sd2)) # because data collection was interupted
     smd_label = label_data_sofiam(smd.shape[0])
 
+    ssd = load_eeg_data("Data/SofiaS/sofias.csv")
+    ssd_label = label_data_sofias(ssd.shape[0])
+
+    #####################
     # Initialize feature extractor
     feature_extractor = EEGFeatureExtractor()
 
+    #####################
     # Process each dataset
     all_features = []
     all_labels = []
     
-    for data, label in zip([gd, nd, smd], [gd_label, nd_label, smd_label]):
+    for data, label in zip([gd, nd, smd,ssd], [gd_label, nd_label, smd_label, ssd_label]):
         # Basic preprocessing
         data = notch_filter(data)
         data = bandpass_filter(data)
@@ -142,19 +185,23 @@ def main(filter_neutral=True):
     from collections import Counter
     print("Final label distribution:", Counter(np.concatenate(all_labels)))
 
+    #####################
     # Combine datasets
     X = np.concatenate(all_features)
     y = np.concatenate(all_labels)
     
-    # Encode labels
+    #####################
+    # Encode labels 
     unique_labels = list(set(y))
     label_map = {label: i for i, label in enumerate(unique_labels)}
     y = np.array([label_map[label] for label in y])
     y = to_categorical(y, num_classes=len(unique_labels))
 
+    #####################
     # Train/test split
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.4, random_state=42)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
 
+    #####################
     # Build and train model
     model = build_feature_model((X_train.shape[1],), len(unique_labels))
     history = model.fit(X_train, y_train, 
@@ -163,6 +210,7 @@ def main(filter_neutral=True):
                        validation_data=(X_test, y_test),
                        verbose=1)
 
+    #####################
     # Evaluate
     loss, accuracy = model.evaluate(X_test, y_test)
     print(f"\nTest Accuracy: {accuracy*100:.2f}%")

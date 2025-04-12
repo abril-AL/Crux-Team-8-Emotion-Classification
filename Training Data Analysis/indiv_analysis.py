@@ -10,8 +10,9 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout
 from tensorflow.keras.utils import to_categorical
 from sklearn.model_selection import train_test_split
+import matplotlib
+matplotlib.use('Agg') # non interactive
 import matplotlib.pyplot as plt
-plt.use('Agg') # non interactive
 from collections import Counter
 from scipy.signal import welch
 import numpy as np

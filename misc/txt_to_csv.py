@@ -22,6 +22,6 @@ def txt_to_csv(txt_file_path, csv_file_path, delimiter=','):
          print(f"An error occurred: {e}")
 
 if __name__ == "__main__":
-    txt_file = 'Data/Navya/navya_data.txt'
-    csv_file = 'output.csv'
+    txt_file = 'Data/SofiaS/sofias.txt'
+    csv_file = 'sofias.csv'
     txt_to_csv(txt_file, csv_file)
