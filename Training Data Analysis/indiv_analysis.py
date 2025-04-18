@@ -47,7 +47,7 @@ def load_eeg_data(fp):
 
 # Notch filter
 def notch_filter(data, fs=255, freq=60, quality=30):
-    print("Applying Notch Filter...")
+    print("\tApplying Notch Filter...")
     # 60Hz notch filter
     b, a = signal.iirnotch(freq, quality, fs)
     return signal.filtfilt(b, a, data, axis=0)
@@ -55,7 +55,7 @@ def notch_filter(data, fs=255, freq=60, quality=30):
 # Bandpass filter (0.1-40Hz)
 def bandpass_filter(data, fs=255, lowcut=0.1, highcut=40, order=4):
     # Butterworth bandpass filter (0.1-40Hz).
-    print("Applying Bandpass Filter")
+    print("\tApplying Bandpass Filter")
     nyquist = 0.5 * fs
     low, high = lowcut / nyquist, highcut / nyquist
     b, a = signal.butter(order, [low, high], btype='band')
@@ -64,7 +64,7 @@ def bandpass_filter(data, fs=255, lowcut=0.1, highcut=40, order=4):
 # Normalize
 def normalize_data(data):
     # Normalize EEG data (zero mean, unit variance).
-    print("Normalizing Data...")
+    print("\tNormalizing Data...")
     return (data - np.mean(data, axis=0)) / np.std(data, axis=0)
 
 # 2. Feature Extraction
@@ -72,7 +72,7 @@ def normalize_data(data):
 # 3 Second sliding window (no overlap)
 def create_windows(data, labels, window_size=765, stride=765):
     # 250 * 3 = 750 samples per window, associated w single label (first sample in that window)
-    print("Dividing into 3s windows...")
+    print("\tDividing into 3s windows...")
     # if data has (N,8) shape - doing N/765 slices and label lookups
     # fast with np arrays
     

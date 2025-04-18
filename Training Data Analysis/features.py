@@ -67,13 +67,22 @@ class EEGFeatureExtractor:
             ])
         return np.array(features)
 
+    def _calculate_rms(self, eeg_window):
+            features = []
+            for ch in range(eeg_window.shape[1]):
+                x = eeg_window[:, ch]
+                rms = np.sqrt(np.mean(np.square(x)))
+                features.append(rms)
+            return np.array(features)
+
     def extract_window_features(self, eeg_window):
         """Extract all features for a single window"""
         return np.concatenate([
             self._calculate_band_powers(eeg_window),
             self._calculate_connectivity(eeg_window),
             self._calculate_hjorth(eeg_window),
-            self._calculate_time_features(eeg_window)
+            self._calculate_time_features(eeg_window),
+            self._calculate_rms(eeg_window)
         ])
 
     def extract_all_features(self, eeg_windows):
