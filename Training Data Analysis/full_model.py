@@ -23,12 +23,12 @@ def label_data_grace(total_samples, fs=255):
         labels.extend([label] * samples_per_section)
     
     if len(labels) > total_samples:
-        print("TRUNCATE: labels:",len(labels),"Total samples", total_samples)
+        print("\tTRUNCATE: labels:",len(labels),"Total samples", total_samples)
         excess = len(labels) - total_samples
         indices_to_remove = np.random.choice(len(labels), excess, replace=False)
         labels = np.delete(labels, indices_to_remove)
 
-    print("Grace: ",len(labels), total_samples)
+    print("\tGrace: ",len(labels), total_samples)
 
     return np.array(labels[:total_samples])
 
@@ -45,23 +45,22 @@ def label_data_navya(total_samples, fs=255):
 
     # Pad or truncate as needed
     if len(labels) < total_samples:
-        print("PAD: labels:",len(labels),"Total samples", total_samples)
+        print("\tPAD: labels:",len(labels),"Total samples", total_samples)
         last_label = labels[-1]
         labels.extend([last_label] * (total_samples - len(labels)))
     
     if len(labels) > total_samples:
-        print("TRUNCATE: labels:",len(labels),"Total samples", total_samples)
+        print("\tTRUNCATE: labels:",len(labels),"Total samples", total_samples)
         excess = len(labels) - total_samples
         indices_to_remove = np.random.choice(len(labels), excess, replace=False)
         labels = np.delete(labels, indices_to_remove)
 
-    print("Navya: ",len(labels), total_samples)
+    print("\tNavya: ",len(labels), total_samples)
     
     return np.array(labels[:total_samples])
 
 def label_data_sofiam(total_samples, fs=255): 
     session_durations = [120,60,120,60,120,60,120,60,120,60,145,60,186,60,120,60] # sec
-    print(">label SM: ",sum(session_durations), "sec", sum(session_durations)/60, "min, total samples:" ,total_samples)
     session_labels = [VA.HVHA,VA.NEUT, VA.HVLA, VA.NEUT, VA.LVHA, 
                       VA.NEUT, VA.LVHA, VA.NEUT, VA.HVLA, VA.NEUT, 
                       VA.HVHA, VA.NEUT, VA.LVHA, VA.NEUT, VA.HVHA, VA.NEUT]
@@ -72,17 +71,17 @@ def label_data_sofiam(total_samples, fs=255):
 
     # Pad or truncate as needed
     if len(labels) < total_samples:
-        print("PAD: labels:",len(labels),"Total samples", total_samples)
+        print("\tPAD: labels:",len(labels),"Total samples", total_samples)
         last_label = labels[-1]
         labels.extend([last_label] * (total_samples - len(labels)))
 
     if len(labels) > total_samples:
-        print("TRUNCATE: labels:",len(labels),"Total samples", total_samples)
+        print("\tTRUNCATE: labels:",len(labels),"Total samples", total_samples)
         excess = len(labels) - total_samples
         indices_to_remove = np.random.choice(len(labels), excess, replace=False)
         labels = np.delete(labels, indices_to_remove)
     
-    print("Sofia M: ",len(labels), total_samples)
+    print("\tSofia M: ",len(labels), total_samples)
 
     return np.array(labels[:total_samples])
 
@@ -98,17 +97,17 @@ def label_data_sofias(total_samples, fs=255):
 
     # Pad or truncate as needed
     if len(labels) < total_samples:
-        print("PAD: labels:",len(labels),"Total samples", total_samples)
+        print("\tPAD: labels:",len(labels),"Total samples", total_samples)
         last_label = labels[-1]
         labels.extend([last_label] * (total_samples - len(labels)))
 
     if len(labels) > total_samples:
-        print("TRUNCATE: labels:",len(labels),"Total samples", total_samples)
+        print("\tTRUNCATE: labels:",len(labels),"Total samples", total_samples)
         excess = len(labels) - total_samples
         indices_to_remove = np.random.choice(len(labels), excess, replace=False)
         labels = np.delete(labels, indices_to_remove)
     
-    print("Sofia S: ",len(labels), total_samples)
+    print("\tSofia S: ",len(labels), total_samples)
 
     return np.array(labels[:total_samples])
 
@@ -135,6 +134,7 @@ def main(filter_neutral=True):
     
     #####################
     # Load and label data
+    print(" --- START: Loading and Labeling Data ---")
     gd = load_eeg_data("Data/Grace/grace.csv")
     gd_label = label_data_grace(gd.shape[0])
     
@@ -148,13 +148,17 @@ def main(filter_neutral=True):
 
     ssd = load_eeg_data("Data/SofiaS/sofias.csv")
     ssd_label = label_data_sofias(ssd.shape[0])
+    print(" --- DONE: Loading and Labeling Data ---")
 
     #####################
     # Initialize feature extractor
+    print(" --- START: Initialize Feature Extractor ---")
     feature_extractor = EEGFeatureExtractor()
+    print(" --- END: Initialize Feature Extractor ---")
 
     #####################
     # Process each dataset
+    print(" --- START: Processing Datasets ---")
     all_features = []
     all_labels = []
     
@@ -181,17 +185,22 @@ def main(filter_neutral=True):
         
         all_features.append(features)
         all_labels.append(window_labels)
+        print("\t +1 ds processed")
+        
+    print(" --- END: Processing Datasets ---")
 
     from collections import Counter
     print("Final label distribution:", Counter(np.concatenate(all_labels)))
 
     #####################
     # Combine datasets
+    print(" --- Combining Datasets ---")
     X = np.concatenate(all_features)
     y = np.concatenate(all_labels)
     
     #####################
     # Encode labels 
+    print(" --- Encoding Labels ---")
     unique_labels = list(set(y))
     label_map = {label: i for i, label in enumerate(unique_labels)}
     y = np.array([label_map[label] for label in y])
@@ -199,10 +208,12 @@ def main(filter_neutral=True):
 
     #####################
     # Train/test split
+    print(" --- Performing Train Test Split ---")
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
 
     #####################
     # Build and train model
+    print(" --- Building and Training Model ---")
     model = build_feature_model((X_train.shape[1],), len(unique_labels))
     history = model.fit(X_train, y_train, 
                        epochs=50, 
@@ -212,6 +223,7 @@ def main(filter_neutral=True):
 
     #####################
     # Evaluate
+    print(" --- Evaluating Model ---")
     loss, accuracy = model.evaluate(X_test, y_test)
     print(f"\nTest Accuracy: {accuracy*100:.2f}%")
 
