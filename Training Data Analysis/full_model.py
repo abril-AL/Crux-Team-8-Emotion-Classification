@@ -1,4 +1,4 @@
-from indiv_analysis import VA, load_eeg_data, notch_filter, bandpass_filter, normalize_data, create_windows
+from indiv_analysis import VA, load_eeg_data, notch_filter, bandpass_filter, normalize_data, create_windows, plot_roc_curve, plot_feature_importance
 from features import EEGFeatureExtractor
 import numpy as np
 from sklearn.model_selection import train_test_split
@@ -229,6 +229,9 @@ def main(filter_neutral=True):
 
     plot_training_history(history, save_path_prefix="feature_model")
     plot_prediction_distribution(model, X_test, y_test, label_map)
+    plot_roc_curve(model, X_test, y_test, label_map)
+    plot_feature_importance(X_train, y_train, n_channels=8)
+
 
     model.save("feature_model.keras")
 

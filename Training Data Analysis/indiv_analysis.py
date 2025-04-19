@@ -18,6 +18,9 @@ from scipy.signal import welch
 import numpy as np
 import scipy.signal as signal
 from io import StringIO
+from sklearn.metrics import roc_curve, auc
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import label_binarize
 
 from enum import Enum
 class VA(Enum):
@@ -260,6 +263,83 @@ def plot_prediction_distribution(model, X_test, y_test, label_map, save_path="pr
     plt.ylabel("Count")
     plt.title("Prediction vs True Label Distribution")
     plt.legend()
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=300)
+    plt.close()
+
+def plot_roc_curve(model, X_val, y_val, label_map, save_path="roc_curve.png"):
+    from sklearn.metrics import roc_curve, auc
+    from sklearn.preprocessing import label_binarize
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    y_pred_proba = model.predict(X_val)
+    y_bin = label_binarize(np.argmax(y_val, axis=1), classes=range(len(label_map)))
+
+    class_names = [va.name for va in sorted(label_map, key=lambda x: label_map[x])]
+
+    fpr = dict()
+    tpr = dict()
+    roc_auc = dict()
+
+    for i in range(len(class_names)):
+        fpr[i], tpr[i], _ = roc_curve(y_bin[:, i], y_pred_proba[:, i])
+        roc_auc[i] = auc(fpr[i], tpr[i])
+
+    plt.figure()
+    for i in range(len(class_names)):
+        plt.plot(fpr[i], tpr[i], label=f"{class_names[i]} (AUC = {roc_auc[i]:.2f})")
+
+    plt.plot([0, 1], [0, 1], 'k--')
+    plt.xlabel("False Positive Rate")
+    plt.ylabel("True Positive Rate")
+    plt.title("Multi-Class ROC Curve")
+    plt.legend(loc="lower right")
+    plt.grid()
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=300)
+    plt.close()
+
+
+#####################
+
+def plot_feature_importance(X_train, y_train, n_channels=8, save_path="feature_importance.png"):
+    from sklearn.ensemble import RandomForestClassifier
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    rf = RandomForestClassifier(n_estimators=100, random_state=42)
+    rf.fit(X_train, np.argmax(y_train, axis=1))
+    importances = rf.feature_importances_
+
+    total_features = X_train.shape[1]
+    per_channel_features = 176  # We know from feature.py this many are per-channel
+    cross_channel_features = total_features - per_channel_features
+
+    if per_channel_features % n_channels != 0:
+        raise ValueError("Per-channel features not divisible by number of channels")
+
+    features_per_channel = per_channel_features // n_channels
+    per_channel_importances = importances[:per_channel_features]
+    pooled = per_channel_importances.reshape(n_channels, features_per_channel).mean(axis=0)
+
+    labels = [
+        "Band Power: Delta", "Band Power: Theta", "Band Power: Alpha", "Band Power: Beta", "Band Power: Gamma",
+        "Hjorth: Mobility", "Hjorth: Complexity",
+        "Time: Mean", "Time: Std", "Time: Var", "Time: Min", "Time: Max",
+        "Time: Median", "Time: Skew", "Time: Kurtosis", "Time: ZeroCrossings", "Time: Entropy",
+        "RMS", "IQR", "Range", "Theta/Alpha", "Beta/Alpha"
+    ]
+
+    if len(labels) != features_per_channel:
+        raise ValueError(f"Expected {features_per_channel} feature labels, but got {len(labels)}.")
+
+    plt.figure(figsize=(12, 6))
+    plt.bar(range(features_per_channel), pooled)
+    plt.xticks(ticks=range(features_per_channel), labels=labels, rotation=45, ha='right')
+    plt.xlabel("Feature Type (pooled across channels)")
+    plt.ylabel("Average Importance")
+    plt.title("Pooled EEG Feature Importances")
     plt.tight_layout()
     plt.savefig(save_path, dpi=300)
     plt.close()
