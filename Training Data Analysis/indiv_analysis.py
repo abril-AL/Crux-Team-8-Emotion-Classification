@@ -340,6 +340,9 @@ def plot_feature_importance(X_train, y_train, n_channels=8, save_path="feature_i
     plt.xlabel("Feature Type (pooled across channels)")
     plt.ylabel("Average Importance")
     plt.title("Pooled EEG Feature Importances")
+
+    plt.ylim(pooled.min() - 0.0005, pooled.max() + 0.0005)
+
     plt.tight_layout()
     plt.savefig(save_path, dpi=300)
     plt.close()
