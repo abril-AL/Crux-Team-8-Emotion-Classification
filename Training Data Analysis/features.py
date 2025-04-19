@@ -92,6 +92,43 @@ class EEGFeatureExtractor:
             features.append(signal_range)
         return np.array(features)
     
+    def _calculate_band_ratios(self, eeg_window):
+        nperseg = min(self.fs*2, len(eeg_window))
+        freqs, psd = welch(eeg_window, fs=self.fs, nperseg=nperseg, axis=0)
+
+        # Frequency bands
+        bands = {
+            'theta': (4, 8),
+            'alpha': (8, 12),
+            'beta': (12, 30)
+        }
+
+        # Compute total power in each band
+        theta_power = []
+        alpha_power = []
+        beta_power = []
+
+        for ch in range(eeg_window.shape[1]):
+            theta_mask = (freqs >= bands['theta'][0]) & (freqs <= bands['theta'][1])
+            alpha_mask = (freqs >= bands['alpha'][0]) & (freqs <= bands['alpha'][1])
+            beta_mask  = (freqs >= bands['beta'][0])  & (freqs <= bands['beta'][1])
+
+            theta_sum = np.sum(psd[theta_mask, ch]) + 1e-12
+            alpha_sum = np.sum(psd[alpha_mask, ch]) + 1e-12
+            beta_sum  = np.sum(psd[beta_mask, ch])  + 1e-12
+
+            theta_power.append(theta_sum)
+            alpha_power.append(alpha_sum)
+            beta_power.append(beta_sum)
+
+        # Compute ratios (per channel)
+        ratios = []
+        for t, a, b in zip(theta_power, alpha_power, beta_power):
+            ratios.append(t / a)  # Theta/Alpha
+            ratios.append(b / a)  # Beta/Alpha
+
+        return np.array(ratios)
+
     def extract_window_features(self, eeg_window):
         """Extract all features for a single window"""
         return np.concatenate([
@@ -101,7 +138,8 @@ class EEGFeatureExtractor:
             self._calculate_time_features(eeg_window),
             self._calculate_rms(eeg_window),
             self._calculate_iqr(eeg_window),
-            self._calculate_range(eeg_window)
+            self._calculate_range(eeg_window),
+            self._calculate_band_ratios(eeg_window)
         ])
 
     def extract_all_features(self, eeg_windows):
