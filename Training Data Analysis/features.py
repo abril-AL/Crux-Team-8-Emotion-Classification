@@ -85,8 +85,13 @@ class EEGFeatureExtractor:
         return np.array(features)
 
     def _calculate_range(self, eeg_window):
-        pass
-
+        features = []
+        for ch in range(eeg_window.shape[1]):
+            x = eeg_window[:, ch]
+            signal_range = np.max(x) - np.min(x)
+            features.append(signal_range)
+        return np.array(features)
+    
     def extract_window_features(self, eeg_window):
         """Extract all features for a single window"""
         return np.concatenate([
@@ -95,7 +100,8 @@ class EEGFeatureExtractor:
             self._calculate_hjorth(eeg_window),
             self._calculate_time_features(eeg_window),
             self._calculate_rms(eeg_window),
-            self._calculate_iqr(eeg_window)
+            self._calculate_iqr(eeg_window),
+            self._calculate_range(eeg_window)
         ])
 
     def extract_all_features(self, eeg_windows):
