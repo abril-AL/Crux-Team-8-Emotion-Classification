@@ -84,6 +84,9 @@ class EEGFeatureExtractor:
             features.append(iqr)
         return np.array(features)
 
+    def _calculate_range(self, eeg_window):
+        pass
+
     def extract_window_features(self, eeg_window):
         """Extract all features for a single window"""
         return np.concatenate([
