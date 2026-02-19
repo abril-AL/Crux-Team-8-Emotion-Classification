@@ -8,9 +8,27 @@ Abril Aguilar-Lopez, Mindy Huynh, Sofia Mendoza, Navya Sahgal, Grace Saunders, S
 
 ### Purpose
 
-Develop software that can recognize 6 emotions with 75% accuracy.
+In a world increasingly blending technology with the human body, we asked: Can we access and display inner emotions using tech? We built NeurooBear—a stuffed animal that lights up to reflect real-time emotional states, detected through EEG signals and classified by a trained CNN model.
 
-Create a device that aids communication and self-regulation between those who are nonverbal or unable to express emotion with depth and providers, caretakers, friends, and family.
+
+**Goal**: Create a device that aids communication and self-regulation between those who are nonverbal or unable to express emotion with depth and providers, caretakers, friends, and family. Develop software that can recognize 6 emotions with 75% accuracy. 
+
+**Significance**: Our device serves as a therapeutic tool in both clinical and everyday environments for individuals struggling with expressing or regulating emotions by:
+Providing nonverbal emotional feedback through a comforting stuffed animal interface.
+Enhancing communication between nonverbal individuals and caregivers, educators, or healthcare providers.
+
+## Research Poster 
+
+Presented at the 2025 California Neurotech Conference at UCSD
+
+<img width="2688" height="2112" alt="2" src="https://github.com/user-attachments/assets/93af755f-87bd-4e73-8b27-265ff1ebdba2" />
+
+## Technical Overview
+
+- EEG signals are collected via an OpenBCI headset.
+- Data is pre-processed (cleaning, filtering, segmenting).
+- A CNN classifies the data into five emotion categories (based on Valence-Arousal space).
+- An Arduino-controlled LED system embedded in a stuffed animal displays the detected emotion.
 
 ### Trial Procedure
 
