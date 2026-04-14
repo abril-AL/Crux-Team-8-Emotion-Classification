@@ -30,6 +30,11 @@ Presented at the 2025 California Neurotech Conference at UCSD
 - A CNN classifies the data into five emotion categories (based on Valence-Arousal space).
 - An Arduino-controlled LED system embedded in a stuffed animal displays the detected emotion.
 
+### Dataflow Diagram
+
+<img width="1266" height="756" alt="image" src="https://github.com/user-attachments/assets/ac1f4505-4b04-4c3d-8096-726777f32aed" />
+
+
 ### Trial Procedure
 
 #### Briefing and Setup
